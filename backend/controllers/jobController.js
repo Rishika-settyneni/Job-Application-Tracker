@@ -1,54 +1,75 @@
 const db = require("../config/db");
 
+// ADD JOB
 exports.addJob = (req, res) => {
-  const { user_id, company, role, status, applied_date } = req.body;
+  const { user_id, company, role, status, applied_date, remarks } = req.body;
 
-  const sql = "INSERT INTO jobs (user_id, company, role, status, applied_date) VALUES (?, ?, ?, ?, ?)";
-  
-  db.query(sql, [user_id, company, role, status, applied_date], (err) => {
+  const sql = `
+    INSERT INTO jobs (user_id, company, role, status, applied_date, remarks)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `;
 
+  db.query(sql, [user_id, company, role, status, applied_date, remarks], (err) => {
     if (err) {
       console.log("❌ MySQL Error:", err);
       return res.status(500).json(err);
     }
-
-    res.json({ message: "Job added successfully" });
+    res.json({ message: "Job Added Successfully" });
   });
 };
 
+// GET JOBS
 exports.getJobs = (req, res) => {
-  const sql = "SELECT * FROM jobs";
-  db.query(sql, (err, results) => {
-    if (err) {
-      console.log("❌ MySQL Error:", err);
-      return res.status(500).json(err);
-    }
+  db.query("SELECT * FROM jobs ORDER BY id DESC", (err, results) => {
+    if (err) return res.status(500).json(err);
     res.json(results);
   });
 };
 
-exports.updateStatus = (req, res) => {
-  const { id, status } = req.body;
+// UPDATE JOB (Timeline + Status)
+exports.updateJob = (req, res) => {
+  const {
+    id,
+    status,
+    shortlisted_date,
+    assessment_date,
+    interview_date,
+    final_result_date,
+    remarks
+  } = req.body;
 
-  const sql = "UPDATE jobs SET status=? WHERE id=?";
-  db.query(sql, [status, id], (err) => {
+  const sql = `
+    UPDATE jobs SET 
+      status = COALESCE(?, status),
+      shortlisted_date = COALESCE(?, shortlisted_date),
+      assessment_date = COALESCE(?, assessment_date),
+      interview_date = COALESCE(?, interview_date),
+      final_result_date = COALESCE(?, final_result_date),
+      remarks = COALESCE(?, remarks)
+    WHERE id = ?
+  `;
+
+  db.query(sql, [
+    status,
+    shortlisted_date,
+    assessment_date,
+    interview_date,
+    final_result_date,
+    remarks,
+    id
+  ], (err) => {
     if (err) {
       console.log("❌ MySQL Error:", err);
       return res.status(500).json(err);
     }
-    res.json({ message: "Status updated" });
+    res.json({ message: "Updated Successfully" });
   });
 };
 
+// DELETE JOB
 exports.deleteJob = (req, res) => {
-  const { id } = req.params;
-
-  const sql = "DELETE FROM jobs WHERE id=?";
-  db.query(sql, [id], (err) => {
-    if (err) {
-      console.log("❌ MySQL Error:", err);
-      return res.status(500).json(err);
-    }
-    res.json({ message: "Job deleted" });
+  db.query("DELETE FROM jobs WHERE id=?", [req.params.id], (err) => {
+    if (err) return res.status(500).json(err);
+    res.json({ message: "Job Deleted" });
   });
 };
